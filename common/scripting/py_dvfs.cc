@@ -65,10 +65,21 @@ setFrequency(PyObject *self, PyObject *args)
    Py_RETURN_NONE;
 }
 
+// ClBu @ULBS
+static PyObject *
+getCoreState(PyObject *self, PyObject *args)
+{
+   long int core_id = -999;
+   if (!PyArg_ParseTuple(args, "l", &core_id))
+       return NULL;
+   UInt64 core_state = Sim()->getMagicServer()->getCoreState(core_id);
+   return PyLong_FromLong(core_state);
+}
 
 static PyMethodDef PyDvfsMethods[] = {
    {"get_frequency",  getFrequency, METH_VARARGS, "Get core or global frequency, in MHz."},
    {"set_frequency",  setFrequency, METH_VARARGS, "Set core frequency, in MHz."},
+   {"get_core_state", getCoreState, METH_VARARGS, "Get core state, in Core::State enum."},
    {NULL, NULL, 0, NULL} /* Sentinel */
 };
 

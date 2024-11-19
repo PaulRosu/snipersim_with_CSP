@@ -35,6 +35,9 @@ class MagicServer
 
       void setProgress(float progress) { m_progress.setProgress(progress); }
 
+      // ClBu @ULBS
+      UInt64 getCoreState(UInt64 core_number);
+
    private:
       bool m_performance_enabled;
       Progress m_progress;

@@ -11,6 +11,7 @@
 #include "stats.h"
 #include "timer.h"
 #include "thread.h"
+#include "core.h"
 
 MagicServer::MagicServer()
       : m_performance_enabled(false)
@@ -254,4 +255,15 @@ UInt64 MagicServer::setInstrumentationMode(UInt64 sim_api_opt)
    Sim()->setInstrumentationMode(inst_mode, true /* update_barrier */);
 
    return 0;
+}
+
+// ClBu @ULBS
+UInt64 MagicServer::getCoreState(UInt64 core_number)
+{
+   UInt32 num_cores = Sim()->getConfig()->getApplicationCores();
+   
+   if (core_number >= num_cores)
+      return UINT64_MAX;
+   Core::State core_state = Sim()->getCoreManager()->getCoreFromID(core_number)->getState();
+   return core_state;
 }
