@@ -195,6 +195,45 @@ class EveryIns:
       self.callback(icount, icount_delta)
 
 
+# PaulRosu@ULBS
+class EveryBranch:
+    """
+    Hook for monitoring branch prediction events.
+    
+    Registers a callback function to be called on every branch prediction.
+    The callback receives:
+        ip (long): Instruction pointer where branch occurred
+        predicted (bool): Branch predictor's guess
+        actual (bool): Actual branch direction
+        indirect (bool): Whether this was an indirect branch
+    
+    Example usage:
+        def handle_branch(ip, predicted, actual, indirect):
+            print(f"Branch at {hex(ip)}: predicted={predicted}, actual={actual}")
+        
+        sim.util.EveryBranch(handle_branch)
+    """
+    def __init__(self, callback, roi_only=True):
+        self.callback = callback
+        self.roi_only = roi_only
+        self.in_roi = False
+        print("[BRANCH_HOOK] Registering branch prediction callback")
+        register(self)
+
+    def hook_roi_begin(self):
+        self.in_roi = True
+        #print("[BRANCH_HOOK] Entered ROI")
+
+    def hook_roi_end(self):
+        self.in_roi = False
+        #print("[BRANCH_HOOK] Exited ROI")
+
+    def hook_branch_predict(self, ip, predicted, actual, indirect):
+        #print("[BRANCH_HOOK] Got branch prediction event")
+        if not self.roi_only or self.in_roi:
+            self.callback(ip, predicted == 1, actual == 1, indirect == 1)
+
+
 have_deleted_stats = False
 def db_delete(prefix, in_sim_end = False):
   global have_deleted_stats

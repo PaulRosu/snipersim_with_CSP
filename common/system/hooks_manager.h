@@ -15,6 +15,7 @@ public:
       // Hook name              Parameter (cast from UInt64)         Description
       HOOK_PERIODIC,            // SubsecondTime current_time        Barrier was reached
       HOOK_PERIODIC_INS,        // UInt64 icount                     Instruction-based periodic callback
+      HOOK_BRANCH_PREDICT,      // BranchPrediction* info            Branch prediction (ip, predicted, actual, indirect) PaulRosu@ULBS
       HOOK_SIM_START,           // none                              Simulation start
       HOOK_SIM_END,             // none                              Simulation end
       HOOK_ROI_BEGIN,           // none                              ROI begin
@@ -93,6 +94,14 @@ public:
       core_id_t core_id;      // Core the thread is now running (or INVALID_CORE_ID == -1 for unscheduled)
       subsecond_time_t time;  // Current time
    } ThreadMigrate;
+
+   // PaulRosu@ULBS
+   typedef struct {
+      IntPtr ip;              // Instruction pointer
+      bool predicted;         // Predicted direction
+      bool actual;            // Actual direction
+      bool indirect;          // Whether this was an indirect branch
+   } BranchPrediction;
 
    HooksManager();
    void init();

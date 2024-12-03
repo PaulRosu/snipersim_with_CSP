@@ -51,6 +51,8 @@ bool PentiumMBranchPredictor::predict(bool indirect, IntPtr ip, IntPtr target)
 
 void PentiumMBranchPredictor::update(bool predicted, bool actual, bool indirect, IntPtr ip, IntPtr target)
 {
+   BranchPredictor::update(predicted, actual, indirect, ip, target);
+   
    updateCounters(predicted, actual);
    ibtb.update(predicted,actual,indirect,ip,target);
    m_btb.update(predicted, actual, indirect, ip, target);

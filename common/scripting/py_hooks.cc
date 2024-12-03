@@ -109,6 +109,65 @@ static SInt64 hookCallbackSyscallExit(UInt64 pFunc, UInt64 _argument)
    return hookCallbackResult(pResult);
 }
 
+/* 
+ * PaulRosu@ULBS
+ * Callback function for branch prediction events
+ * 
+ * This function bridges between C++ branch predictor and Python callbacks:
+ * - Receives branch prediction data from C++ (instruction pointer, predictions)
+ * - Converts C++ types to Python arguments
+ * - Calls the registered Python callback function
+ * - Handles Python reference counting and error checking
+ *
+ * Parameters:
+ *   pFunc (UInt64): Pointer to the Python callback function (cast from PyObject*)
+ *   argument (UInt64): Pointer to BranchPrediction struct containing:
+ *     - ip: Instruction pointer where branch occurred
+ *     - predicted: Branch predictor's guess (true/false)
+ *     - actual: Actual branch direction (true/false)
+ *     - indirect: Whether this was an indirect branch
+ *
+ * Returns:
+ *   SInt64: 0 on success, -1 on Python error
+ */
+static SInt64 hookCallbackBranchPredict(UInt64 pFunc, UInt64 argument)
+{
+    PyGILState_STATE state = PyGILState_Ensure();  // Acquire the Python GIL
+    
+    HooksManager::BranchPrediction* info = (HooksManager::BranchPrediction*)argument;
+    
+    // Build arguments tuple safely
+    PyObject* args = Py_BuildValue("(liii)", 
+        (long long)info->ip,      // instruction pointer
+        (int)info->predicted,     // predicted direction
+        (int)info->actual,        // actual direction
+        (int)info->indirect       // is indirect branch
+    );
+    
+    // Check if argument building failed, print error and cleanup if so
+    if (args == NULL) {
+        PyErr_Print();
+        PyGILState_Release(state);
+        return -1;
+    }
+    
+    // Call the Python function
+    PyObject* ret = PyObject_CallObject((PyObject*)pFunc, args);
+    Py_DECREF(args);
+    
+    // Check if Python function call failed, print error and cleanup if so
+    if (ret == NULL) {
+        PyErr_Print();
+        PyGILState_Release(state);
+        return -1;
+    }
+    
+    // Cleanup Python objects and release GIL before returning success
+    Py_DECREF(ret);
+    PyGILState_Release(state);
+    return 0;
+}
+
 static PyObject *
 registerHook(PyObject *self, PyObject *args)
 {
@@ -179,6 +238,9 @@ registerHook(PyObject *self, PyObject *args)
          break;
       case HookType::HOOK_SYSCALL_EXIT:
          Sim()->getHooksManager()->registerHook(type, hookCallbackSyscallExit, (UInt64)pFunc);
+         break;
+      case HookType::HOOK_BRANCH_PREDICT: // PaulRosu@ULBS
+         Sim()->getHooksManager()->registerHook(type, hookCallbackBranchPredict, (UInt64)pFunc);
          break;
       case HookType::HOOK_TYPES_MAX:
          assert(0);

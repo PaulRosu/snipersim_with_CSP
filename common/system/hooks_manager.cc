@@ -4,6 +4,7 @@
 const char* HookType::hook_type_names[] = {
    "HOOK_PERIODIC",
    "HOOK_PERIODIC_INS",
+   "HOOK_BRANCH_PREDICT", // PaulRosu@ULBS
    "HOOK_SIM_START",
    "HOOK_SIM_END",
    "HOOK_ROI_BEGIN",
