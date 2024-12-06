@@ -101,6 +101,7 @@ public:
       bool predicted;         // Predicted direction
       bool actual;            // Actual direction
       bool indirect;          // Whether this was an indirect branch
+      core_id_t core_id;      // Core ID
    } BranchPrediction;
 
    HooksManager();

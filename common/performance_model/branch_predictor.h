@@ -13,7 +13,7 @@ public:
    virtual ~BranchPredictor();
 
    virtual bool predict(bool indirect, IntPtr ip, IntPtr target) = 0;
-   virtual void update(bool predicted, bool actual, bool indirect, IntPtr ip, IntPtr target) = 0;
+   virtual void update(bool predicted, bool actual, bool indirect, IntPtr ip, IntPtr target);
 
    UInt64 getMispredictPenalty();
    static BranchPredictor* create(core_id_t core_id);
@@ -27,6 +27,7 @@ protected:
    void updateCounters(bool predicted, bool actual);
 
 private:
+   core_id_t m_core_id; //PaulRosu@ULBS
    UInt64 m_correct_predictions;
    UInt64 m_incorrect_predictions;
 

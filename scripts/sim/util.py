@@ -206,10 +206,11 @@ class EveryBranch:
         predicted (bool): Branch predictor's guess
         actual (bool): Actual branch direction
         indirect (bool): Whether this was an indirect branch
+        core_id (int): ID of the core where the branch was executed
     
     Example usage:
-        def handle_branch(ip, predicted, actual, indirect):
-            print(f"Branch at {hex(ip)}: predicted={predicted}, actual={actual}")
+        def handle_branch(ip, predicted, actual, indirect, core_id):
+            print(f"Branch at {hex(ip)} on core {core_id}: predicted={predicted}, actual={actual}")
         
         sim.util.EveryBranch(handle_branch)
     """
@@ -228,10 +229,10 @@ class EveryBranch:
         self.in_roi = False
         #print("[BRANCH_HOOK] Exited ROI")
 
-    def hook_branch_predict(self, ip, predicted, actual, indirect):
+    def hook_branch_predict(self, ip, predicted, actual, indirect, core_id):
         #print("[BRANCH_HOOK] Got branch prediction event")
         if not self.roi_only or self.in_roi:
-            self.callback(ip, predicted == 1, actual == 1, indirect == 1)
+            self.callback(ip, predicted == 1, actual == 1, indirect == 1, core_id)
 
 
 have_deleted_stats = False

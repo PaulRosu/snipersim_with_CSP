@@ -137,11 +137,12 @@ static SInt64 hookCallbackBranchPredict(UInt64 pFunc, UInt64 argument)
     HooksManager::BranchPrediction* info = (HooksManager::BranchPrediction*)argument;
     
     // Build arguments tuple safely
-    PyObject* args = Py_BuildValue("(liii)", 
+    PyObject* args = Py_BuildValue("(liiii)", 
         (long long)info->ip,      // instruction pointer
         (int)info->predicted,     // predicted direction
         (int)info->actual,        // actual direction
-        (int)info->indirect       // is indirect branch
+        (int)info->indirect,       // is indirect branch
+        (int)info->core_id        // core ID
     );
     
     // Check if argument building failed, print error and cleanup if so

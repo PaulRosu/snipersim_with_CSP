@@ -8,17 +8,19 @@
 #include "hooks_manager.h" // PaulRosu@ULBS
 
 BranchPredictor::BranchPredictor()
-   : m_correct_predictions(0)
+   : m_core_id(0) // PaulRosu@ULBS
+   , m_correct_predictions(0)
    , m_incorrect_predictions(0)
 {
 }
 
 BranchPredictor::BranchPredictor(String name, core_id_t core_id)
-   : m_correct_predictions(0)
+   : m_core_id(core_id) // PaulRosu@ULBS
+   , m_correct_predictions(0)
    , m_incorrect_predictions(0)
 {
-  registerStatsMetric(name, core_id, "num-correct", &m_correct_predictions);
-  registerStatsMetric(name, core_id, "num-incorrect", &m_incorrect_predictions);
+   registerStatsMetric(name, core_id, "num-correct", &m_correct_predictions);
+   registerStatsMetric(name, core_id, "num-incorrect", &m_incorrect_predictions);
 }
 
 BranchPredictor::~BranchPredictor()
@@ -94,10 +96,9 @@ void BranchPredictor::update(bool predicted, bool actual, bool indirect, IntPtr 
       ip,         // instruction pointer
       predicted,  // predicted direction
       actual,     // actual direction
-      indirect    // is indirect branch
+      indirect,   // is indirect branch
+      m_core_id  // core ID
    };
-
-   //printf("[BRANCH_PREDICTOR] Calling hook with ip=%lx\n", (unsigned long)ip);
 
    // Call Python hooks with branch prediction info
    Sim()->getHooksManager()->callHooks(
