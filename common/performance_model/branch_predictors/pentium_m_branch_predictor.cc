@@ -53,7 +53,8 @@ void PentiumMBranchPredictor::update(bool predicted, bool actual, bool indirect,
 {
    BranchPredictor::update(predicted, actual, indirect, ip, target);
    
-   updateCounters(predicted, actual);
+   // PaulRosu@ULBS: counters already updated in BranchPredictor::update()
+   // updateCounters(predicted, actual);
    ibtb.update(predicted,actual,indirect,ip,target);
    m_btb.update(predicted, actual, indirect, ip, target);
    m_lpb.update(predicted, actual, ip, target);
