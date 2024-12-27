@@ -63,9 +63,9 @@ class Scsp:
     self.stats_file = sim.config.output_dir + "acaps_scsp_stats.csv"
     self.res_file = sim.config.output_dir + "acaps_scsp_res.csv"
 
-    print("[ACAPS_SCSP] Calling interval [ns]: " + str(self.calling_interval_ns))
-    print("[ACAPS_SCSP] Idle freq. [MHz]: " + str(self.idle_freq_mhz))
-    print("[ACAPS_SCSP] Predictor confidence: " + str(self.predictor_confidence))
+    print "[ACAPS_SCSP] Calling interval [ns]: %s" % str(self.calling_interval_ns)
+    print "[ACAPS_SCSP] Idle freq. [MHz]: %s" % str(self.idle_freq_mhz)
+    print "[ACAPS_SCSP] Predictor confidence: %s" % str(self.predictor_confidence)
 
     # Check if the file exists, and delete it if it does
     if os.path.exists(self.stats_file):
