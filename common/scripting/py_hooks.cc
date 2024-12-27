@@ -5,6 +5,7 @@
 #include "magic_server.h"
 #include "syscall_model.h"
 #include "sim_api.h"
+#include <Python.h>
 
 static SInt64 hookCallbackResult(PyObject *pResult)
 {
@@ -132,40 +133,28 @@ static SInt64 hookCallbackSyscallExit(UInt64 pFunc, UInt64 _argument)
  */
 static SInt64 hookCallbackBranchPredict(UInt64 pFunc, UInt64 argument)
 {
-    PyGILState_STATE state = PyGILState_Ensure();  // Acquire the Python GIL
-    
     HooksManager::BranchPrediction* info = (HooksManager::BranchPrediction*)argument;
     
-    // Build arguments tuple safely
     PyObject* args = Py_BuildValue("(liiii)", 
-        (long long)info->ip,      // instruction pointer
-        (int)info->predicted,     // predicted direction
-        (int)info->actual,        // actual direction
-        (int)info->indirect,       // is indirect branch
-        (int)info->core_id        // core ID
+        (long long)info->ip,
+        (int)info->predicted,
+        (int)info->actual,
+        (int)info->indirect,
+        (int)info->core_id
     );
     
-    // Check if argument building failed, print error and cleanup if so
     if (args == NULL) {
-        PyErr_Print();
-        PyGILState_Release(state);
         return -1;
     }
     
-    // Call the Python function
     PyObject* ret = PyObject_CallObject((PyObject*)pFunc, args);
     Py_DECREF(args);
     
-    // Check if Python function call failed, print error and cleanup if so
     if (ret == NULL) {
-        PyErr_Print();
-        PyGILState_Release(state);
         return -1;
     }
     
-    // Cleanup Python objects and release GIL before returning success
     Py_DECREF(ret);
-    PyGILState_Release(state);
     return 0;
 }
 

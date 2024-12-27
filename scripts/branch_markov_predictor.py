@@ -25,9 +25,9 @@ class BranchMarkovPredictor:
     def handle_branch(self, ip, predicted, actual, indirect):
         self.branch_count += 1
         if self.branch_count % 1000 == 0:  # Print periodically
-            print(f"[BRANCH_MARKOV] Branch #{self.branch_count}")
-            print(f"  IP: {hex(ip)}")
-            print(f"  Predicted: {predicted}, Actual: {actual}")
-            print(f"  {'Correct!' if predicted == actual else 'Incorrect'}")
+            print("[BRANCH_MARKOV] Branch #{0}".format(self.branch_count))
+            print("  IP: {0}".format(hex(ip)))
+            print("  Predicted: {0}, Actual: {1}".format(predicted, actual))
+            print("  {0}".format('Correct!' if predicted == actual else 'Incorrect'))
 
 sim.util.register(BranchMarkovPredictor())

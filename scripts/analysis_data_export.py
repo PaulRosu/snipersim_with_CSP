@@ -42,12 +42,12 @@ class CoreStateAtBranchEventAnalyzer:
         self.analysis_summary_file = None
         
         self.observation_window = 100   # microseconds
-        self.sampling_period = 1       # microseconds
-        self.active_records = {}       # key=(event_id, ip), value=record dict
-        self.active_core_records = {}  # key=core_id, value=list of (event_id, ip)
-        self.completed_records = []    # store completed records in memory
+        self.sampling_period = 1        # microseconds
+        self.active_records = {}        # key=(event_id, ip), value=record dict
+        self.active_core_records = {}   # key=core_id, value=list of (event_id, ip)
+        self.completed_records = []     # store completed records in memory
         self.total_branches = 0        # track total branches
-        self.next_event_id = 1         # track the next available event ID
+        self.event_counter = 0         # Remove next_event_id and use event_counter consistently
 
     def setup(self, args):
         # Configuration parameters
@@ -59,7 +59,8 @@ class CoreStateAtBranchEventAnalyzer:
         self.event_counter = 0        # Event counter
         self.active_core_records = {} # Currently tracked core records
         
-        print(f"[CORE_ANALYZER] Initialized with observation_window={self.observation_window}us, sampling_period={self.sampling_period}us")
+        print("[CORE_ANALYZER] Initialized with observation_window={0}us, sampling_period={1}us".format(
+            self.observation_window, self.sampling_period))
         
         # Setup output files
         self.results_folder = sim.config.output_dir
@@ -84,21 +85,21 @@ class CoreStateAtBranchEventAnalyzer:
         current_time = sim.stats.time()
         current_instruction_count = sim.stats.icount()
 
-        event_id = self.next_event_id
-        self.next_event_id += 1
+        event_id = self.event_counter
+        self.event_counter += 1
 
         if core_id not in self.active_core_records:
             self.active_core_records[core_id] = []
         
         # Create record for this branch event
-        record_key = (self.event_counter, ip)
+        record_key = (event_id, ip)
         event_record = {
             'start_time': current_time,
             'instruction_count': current_instruction_count,
             'states': [],
             'branch_taken': actual,
             'core_id': core_id,
-            'event_id': self.event_counter,
+            'event_id': event_id,
             'ip': ip
         }
         
@@ -138,12 +139,15 @@ class CoreStateAtBranchEventAnalyzer:
         event_id, ip = record_key
         
         with open(self.state_patterns_file, 'a') as f:
-            # Format state sequence as comma-separated string
             state_sequence = ','.join(str(s) for _, s in record['states'])
             
-            # Write record to CSV
-            f.write(f"{record['event_id']},{record['start_time']},{record['core_id']},"
-                   f"{hex(ip)},{record['branch_taken']},{state_sequence}\n")
+            f.write("{0},{1},{2},{3},{4},{5}\n".format(
+                record['event_id'],
+                record['start_time'],
+                record['core_id'],
+                hex(ip),
+                record['branch_taken'],
+                state_sequence))
 
     def generate_analysis_summary(self):
         """Generate statistical summary of collected state patterns."""
@@ -166,7 +170,7 @@ class CoreStateAtBranchEventAnalyzer:
                         core_id = int(parts[2])
                         ip = parts[3]
                         branch_taken = parts[4].lower() == 'true'
-                        states = [int(s) for s in parts[5:]]
+                        states = [int(s) for s in parts[5:] if s and s not in ('True', 'False')]
                         
                         total_records += 1
                         
@@ -187,8 +191,8 @@ class CoreStateAtBranchEventAnalyzer:
                                     pattern_stats[ip]['branch_taken_count'] += 1
                                     
                     except Exception as e:
-                        print(f"[CORE_ANALYZER] Error processing record: {line.strip()}")
-                        print(f"[CORE_ANALYZER] Error details: {str(e)}")
+                        print("[CORE_ANALYZER] Error processing record: {0}".format(line.strip()))
+                        print("[CORE_ANALYZER] Error details: {0}".format(str(e)))
             
             # Write statistical summary
             with open(self.analysis_summary_file, 'w') as f:
@@ -203,14 +207,19 @@ class CoreStateAtBranchEventAnalyzer:
                     idle_percentage = len(idle_positions) / (count * self.observation_window) * 100
                     branch_taken_ratio = stats['branch_taken_count'] / count
                     
-                    f.write(f"{ip},{count},{avg_position:.2f},{idle_percentage:.2f},{branch_taken_ratio:.2f}\n")
+                    f.write("{0},{1},{2:.2f},{3:.2f},{4:.2f}\n".format(
+                        ip,
+                        count,
+                        avg_position,
+                        idle_percentage,
+                        branch_taken_ratio))
             
         except Exception as e:
-            print(f"[CORE_ANALYZER] Error generating summary: {str(e)}")
+            print("[CORE_ANALYZER] Error generating summary: {0}".format(str(e)))
         
         finally:
-            print(f"[CORE_ANALYZER] Analyzed {total_records} total records")
-            print(f"[CORE_ANALYZER] Found {len(pattern_stats)} branches with IDLE states")
+            print("[CORE_ANALYZER] Analyzed {0} total records".format(total_records))
+            print("[CORE_ANALYZER] Found {0} branches with IDLE states".format(len(pattern_stats)))
 
     def hook_sim_end(self):
         # Finalize any events still active at simulation end
@@ -223,7 +232,14 @@ class CoreStateAtBranchEventAnalyzer:
             f.write("Event_ID,Instruction_Count,Start_Time,Core_ID,Branch_IP,Branch_Taken,States\n")
             for record in self.completed_records:
                 states_str = ','.join(str(s) for _, s in record['states'])
-                f.write(f"{record['event_id']},{record['instruction_count']},{record['start_time']},{record['core_id']},{hex(record['ip'])},{record['branch_taken']},{states_str}\n")
+                f.write("{0},{1},{2},{3},{4},{5},{6}\n".format(
+                    record['event_id'],
+                    record['instruction_count'],
+                    record['start_time'],
+                    record['core_id'],
+                    hex(record['ip']),
+                    record['branch_taken'],
+                    states_str))
 
         self.generate_analysis_summary()
 
