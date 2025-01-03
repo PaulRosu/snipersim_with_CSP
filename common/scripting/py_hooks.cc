@@ -6,6 +6,7 @@
 #include "syscall_model.h"
 #include "sim_api.h"
 #include <Python.h>
+#include <pythread.h>
 
 static SInt64 hookCallbackResult(PyObject *pResult)
 {
@@ -117,8 +118,7 @@ static SInt64 hookCallbackSyscallExit(UInt64 pFunc, UInt64 _argument)
  * This function bridges between C++ branch predictor and Python callbacks:
  * - Receives branch prediction data from C++ (instruction pointer, predictions)
  * - Converts C++ types to Python arguments
- * - Calls the registered Python callback function
- * - Handles Python reference counting and error checking
+ * - Calls the registered Python callback function in a thread-safe manner
  *
  * Parameters:
  *   pFunc (UInt64): Pointer to the Python callback function (cast from PyObject*)
@@ -127,35 +127,51 @@ static SInt64 hookCallbackSyscallExit(UInt64 pFunc, UInt64 _argument)
  *     - predicted: Branch predictor's guess (true/false)
  *     - actual: Actual branch direction (true/false)
  *     - indirect: Whether this was an indirect branch
+ *     - core_id: ID of the core where the branch occurred
  *
  * Returns:
- *   SInt64: 0 on success, -1 on Python error
+ *   SInt64: -1 on error or if Python callback fails, otherwise the callback's return value
+ *
+ * Thread Safety:
+ *   Uses a mutex to ensure thread-safe access to Python interpreter
  */
 static SInt64 hookCallbackBranchPredict(UInt64 pFunc, UInt64 argument)
 {
-    HooksManager::BranchPrediction* info = (HooksManager::BranchPrediction*)argument;
+    static pthread_mutex_t callback_mutex = PTHREAD_MUTEX_INITIALIZER;
     
-    PyObject* args = Py_BuildValue("(liiii)", 
+    pthread_mutex_lock(&callback_mutex);  // Serialize access to Python
+
+    if (!pFunc || !argument) {
+        fprintf(stderr, "[HOOKS] Error: Invalid function pointer or argument\n");
+        pthread_mutex_unlock(&callback_mutex);
+        return -1;
+    }
+
+    HooksManager::BranchPrediction* info = (HooksManager::BranchPrediction*)argument;
+    if (!info) {
+        fprintf(stderr, "[HOOKS] Error: Invalid BranchPrediction pointer\n");
+        pthread_mutex_unlock(&callback_mutex);
+        return -1;
+    }
+
+    PyObject *args = Py_BuildValue("(Liiii)", 
         (long long)info->ip,
         (int)info->predicted,
         (int)info->actual,
         (int)info->indirect,
         (int)info->core_id
     );
-    
-    if (args == NULL) {
+
+    if (!args) {
+        pthread_mutex_unlock(&callback_mutex);
         return -1;
     }
-    
-    PyObject* ret = PyObject_CallObject((PyObject*)pFunc, args);
-    Py_DECREF(args);
-    
-    if (ret == NULL) {
-        return -1;
-    }
-    
-    Py_DECREF(ret);
-    return 0;
+
+    PyObject *pResult = HooksPy::callPythonFunction((PyObject *)pFunc, args);
+    SInt64 result = hookCallbackResult(pResult);
+
+    pthread_mutex_unlock(&callback_mutex);
+    return result;
 }
 
 static PyObject *
