@@ -55,6 +55,8 @@ class MarkovChainPredictor:
         self.num_predictions_idle = 0
         self.num_predictions_active = 0
 
+        self.previous_predictions = {}  # Store predictions per core
+
     def update_chain(self, core_id, branch_state, encountered_states):
         """
         Update the Markov chain with a new branch transition for the specified core.
@@ -117,7 +119,9 @@ class MarkovChainPredictor:
             return None
 
         idle_prob = float(total_idle) / float(total_count)
-        return (idle_prob > 0.5)
+        predicted_idle = (idle_prob > 0.5)
+        self.previous_predictions[core_id] = predicted_idle
+        return predicted_idle
 
     def log_prediction(self, event_id, core_id, predicted_idle, actual_idle):
         """
@@ -280,15 +284,18 @@ class CoreStateAndBranchMonitor:
             # Log the current core state
             self.core_state_log.append((event_id, core_id, state_id, time_fs))
 
-            # Perform and log a Markov chain prediction
-            predicted_idle = self.markov_predictor.predict_idle(core_id)
-            actual_idle = is_idle(state_id)
-            self.markov_predictor.log_prediction(
-                event_id=event_id,
-                core_id=core_id,
-                predicted_idle=predicted_idle,
-                actual_idle=actual_idle
-            )
+            # Compare current state with previous prediction
+            previous_prediction = self.markov_predictor.previous_predictions.get(core_id)
+            if previous_prediction is not None:
+                self.markov_predictor.log_prediction(
+                    event_id=event_id,
+                    core_id=core_id,
+                    predicted_idle=previous_prediction,
+                    actual_idle=is_idle(state_id)
+                )
+            
+            # Make and store new prediction for next period
+            self.markov_predictor.predict_idle(core_id) 
 
     def hook_branch_predictor(self, core_id, ip, predicted, actual, indirect):
         """
